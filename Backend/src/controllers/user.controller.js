@@ -2,6 +2,7 @@ const User = require("../model/user.model");
 const bcrypt = require('bcrypt');
 const createMail = require('../utils/nodemailer')
 const Otp = require('../model/otp.model')
+const jwt = require('jsonwebtoken')
 
 
 const registerUser = async (req, res) => {
@@ -137,4 +138,79 @@ const verify_user = async (req, res) => {
 };
 
 
-module.exports = {registerUser,verify_user};
+const loginUser = async(req,res)=>{
+    try{
+        const { registrationId, emailId, password } = req.body;
+            if(!registrationId && !emailId){
+                return res.status(400).json({
+                    message:"please provide information",
+                    success:false
+                })
+            }
+            if(!password){
+                return res.status(400).json({
+                    message:"please provide password",
+                    success:false
+                })
+            }
+            const user1 = await User.findOne({
+                $or: [{ emailId }, { registrationId }]
+            }).select("Name emailId registrationId password");
+            const flag = bcrypt.compare(password.toString(),user1.password?.toString());
+            if(!flag){
+                return res.status(400).json({
+                    message:"invalid password",
+                    success:false
+                })
+            }
+            const token = await jwt.sign({
+                _id:user1._id,
+                Name:user1.Name,
+                emailId:user1.emailId,
+                registrationId:user1.registrationId
+                },
+                process.env.TOKEN_SECRET,
+                {
+                    expiresIn:process.env.TOKEN_EXPIRY
+                }
+                );
+                if(!token){
+                    res.status(500).json({err:"Error in token generation"});
+                }
+                res.cookie("token", token,{
+                    // httpOnly:true,
+                    // secure: true,
+                    // sameSite: "None"
+                }).status(200).json({
+                    success: true,
+                    token,
+                    
+                    message: "Logged in successfully",
+                });
+    
+
+    }
+    catch(e){
+        console.log("error in login",e);
+        return res.status(500).json({
+            success:false,
+            message:"Error in logging in"
+        })
+    }
+    
+}
+
+const logoutUser = async(req,res)=>{
+    return res
+      .clearCookie("token", {
+        httpOnly: true,
+        // secure: true, // Match the login cookie settings
+        // sameSite: "None",
+        // partitioned: true
+      })
+      .status(200)
+      .json({ message: "Logged out successfully" });
+}
+
+
+module.exports = {registerUser,verify_user,loginUser,logoutUser};
