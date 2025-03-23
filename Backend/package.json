@@ -15,6 +15,8 @@
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
     "mongoose": "^8.10.0",
-    "nodemailer": "^6.10.0"
+    "nodemailer": "^6.10.0",
+    "protect": "^0.5.0",
+    "protest": "^0.0.1"
   }
 }
